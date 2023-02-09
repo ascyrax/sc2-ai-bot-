@@ -1,1 +1,9 @@
 train_data
+wandb
+models
+models.zip
+logs
+SC2RL-main\models
+SC2RL-main\wandb
+SC2RL-main\logs
+SC2RL-main\state_rwd_action.pkl
