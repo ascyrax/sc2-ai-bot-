@@ -205,21 +205,31 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
                         # if we can afford it:
                         if self.can_afford(UnitTypeId.GATEWAY) and self.already_pending(UnitTypeId.GATEWAY) == 0:
                             # build gateway
-                            await self.build(UnitTypeId.GATEWAY, near=nexus)
+                            # await self.build(UnitTypeId.GATEWAY, near=nexus)
+                            await self.build_gateway()
                         
-                    # if the is not a cybernetics core close:
-                    if not self.units.structure(UnitTypeId.CYBERNETICSCORE).closer_than(10, nexus).exists:
-                        # if we can afford it:
-                        if self.can_afford(UnitTypeId.CYBERNETICSCORE) and self.already_pending(UnitTypeId.CYBERNETICSCORE) == 0:
-                            # build cybernetics core
-                            await self.build(UnitTypeId.CYBERNETICSCORE, near=nexus)
+                    # if the is not a cybernetics core close: // WRONG
+                    # if not self.units.structure(UnitTypeId.CYBERNETICSCORE).closer_than(10, nexus).exists:
+                    #     # if we can afford it:
+                    #     if self.can_afford(UnitTypeId.CYBERNETICSCORE) and self.already_pending(UnitTypeId.CYBERNETICSCORE) == 0:
+                    #         # build cybernetics core
+                    #         await self.build(UnitTypeId.CYBERNETICSCORE, near=nexus)
+                    # RIGHT - if cybernetics core doesn't exist
+                    pylon = self.units(PYLON).ready.noqueue.random      
+                    cybernetics_cores = self.units(CYBERNETICSCORE).ready
+                    if not cybernetics_cores.exists:
+                        if self.units(GATEWAY).ready.exists:
+                            if self.can_afford(CYBERNETICSCORE) and not self.already_pending(CYBERNETICSCORE):
+                                await self.build(CYBERNETICSCORE, near=pylon.position.towards(self.game_info.map_center, 5))
 
-                    # if there is not a stargate close:
-                    if not self.units.structure(UnitTypeId.STARGATE).closer_than(10, nexus).exists:
-                        # if we can afford it:
-                        if self.can_afford(UnitTypeId.STARGATE) and self.already_pending(UnitTypeId.STARGATE) == 0:
-                            # build stargate
-                            await self.build(UnitTypeId.STARGATE, near=nexus)
+                    # # if there is not a stargate close:
+                    # if not self.units.structure(UnitTypeId.STARGATE).closer_than(10, nexus).exists:
+                    #     # if we can afford it:
+                    #     if self.can_afford(UnitTypeId.STARGATE) and self.already_pending(UnitTypeId.STARGATE) == 0:
+                    #         # build stargate
+                    #         await self.build(UnitTypeId.STARGATE, near=nexus)
+
+                    await self.build_stargate()
 
             except Exception as e:
                 print(e)
@@ -228,10 +238,11 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
         #2: build voidray (random stargate)
         elif action == 2:
             try:
-                if self.can_afford(UnitTypeId.VOIDRAY):
-                    for sg in self.units.structure(UnitTypeId.STARGATE).ready.idle:
-                        if self.can_afford(UnitTypeId.VOIDRAY):
-                            sg.train(UnitTypeId.VOIDRAY)
+                # if self.can_afford(UnitTypeId.VOIDRAY):
+                #     for sg in self.units.structure(UnitTypeId.STARGATE).ready.idle:
+                #         if self.can_afford(UnitTypeId.VOIDRAY):
+                #             sg.train(UnitTypeId.VOIDRAY)
+                await self.build_voidray()
             
             except Exception as e:
                 print(e)
@@ -264,27 +275,105 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
         elif action == 4:
             try:
                 # take all void rays and attack!
-                for voidray in self.units(UnitTypeId.VOIDRAY).idle:
+            
+                for u in self.units(VOIDRAY).idle:
                     # if we can attack:
-                    if self.enemy_units.closer_than(10, voidray):
+                    if self.known_enemy_units.closer_than(10, u):
                         # attack!
-                        voidray.attack(random.choice(self.enemy_units.closer_than(10, voidray)))
+                        # u.attack(random.choice(self.known_enemy_units.closer_than(10, u)))
+                        target=random.choice(self.known_enemy_units.closer_than(10, u))
+                        await self.do(u.attack(target))
+
                     # if we can attack:
-                    elif self.enemy_structures.closer_than(10, voidray):
+                    elif self.known_enemy_structures.closer_than(10, u):
                         # attack!
-                        voidray.attack(random.choice(self.enemy_structures.closer_than(10, voidray)))
+                        # u.attack(random.choice(self.known_enemy_structures.closer_than(10, u)))
+                        target = random.choice(self.known_enemy_structures.closer_than(10, u))
+                        await self.do(u.attack(target))
                     # any enemy units:
-                    elif self.enemy_units:
+                    elif self.known_enemy_units:
                         # attack!
-                        voidray.attack(random.choice(self.enemy_units))
+                        # u.attack(random.choice(self.known_enemy_units))
+                        target = random.choice(self.known_enemy_units)
+                        await self.do(u.attack(target))
                     # any enemy structures:
-                    elif self.enemy_structures:
+                    elif self.known_enemy_structures:
                         # attack!
-                        voidray.attack(random.choice(self.enemy_structures))
+                        # u.attack(random.choice(self.known_enemy_structures))
+                        target = random.choice(self.known_enemy_structures)
+                        await self.do(u.attack(target)) 
+
                     # if we can attack:
                     elif self.enemy_start_locations:
                         # attack!
-                        voidray.attack(self.enemy_start_locations[0])
+                        # u.attack(self.enemy_start_locations[0])
+                        target = self.enemy_start_locations[0]
+                        await self.do(u.attack(target)) 
+
+                    
+
+
+                # for u in self.units(STALKER).idle:
+                #     target = self.start_location
+                #     # if we can attack:
+                #     if self.known_enemy_units.closer_than(10, u):
+                #         # attack!
+                #         # u.attack(random.choice(self.known_enemy_units.closer_than(10, u)))
+                #         target=random.choice(self.known_enemy_units.closer_than(10, u))
+
+                #     # if we can attack:
+                #     elif self.known_enemy_structures.closer_than(10, u):
+                #         # attack!
+                #         # u.attack(random.choice(self.known_enemy_structures.closer_than(10, u)))
+                #         target = random.choice(self.known_enemy_structures.closer_than(10, u))
+                #     # any enemy units:
+                #     elif self.known_enemy_units:
+                #         # attack!
+                #         # u.attack(random.choice(self.known_enemy_units))
+                #         target = random.choice(self.known_enemy_units)
+                #     # any enemy structures:
+                #     elif self.known_enemy_structures:
+                #         # attack!
+                #         # u.attack(random.choice(self.known_enemy_structures))
+                #         target = random.choice(self.known_enemy_structures)
+                #     # if we can attack:
+                #     elif self.enemy_start_locations:
+                #         # attack!
+                #         # u.attack(self.enemy_start_locations[0])
+                #         target = self.enemy_start_locations[0]
+
+                #     await self.do(u.attack(target)) 
+
+                # for u in self.units(ZEALOT).idle:
+                #     target = self.start_location
+                #     # if we can attack:
+                #     if self.known_enemy_units.closer_than(10, u):
+                #         # attack!
+                #         # u.attack(random.choice(self.known_enemy_units.closer_than(10, u)))
+                #         target=random.choice(self.known_enemy_units.closer_than(10, u))
+
+                #     # if we can attack:
+                #     elif self.known_enemy_structures.closer_than(10, u):
+                #         # attack!
+                #         # u.attack(random.choice(self.known_enemy_structures.closer_than(10, u)))
+                #         target = random.choice(self.known_enemy_structures.closer_than(10, u))
+                #     # any enemy units:
+                #     elif self.known_enemy_units:
+                #         # attack!
+                #         # u.attack(random.choice(self.known_enemy_units))
+                #         target = random.choice(self.known_enemy_units)
+                #     # any enemy structures:
+                #     elif self.known_enemy_structures:
+                #         # attack!
+                #         # u.attack(random.choice(self.known_enemy_structures))
+                #         target = random.choice(self.known_enemy_structures)
+                #     # if we can attack:
+                #     elif self.enemy_start_locations:
+                #         # attack!
+                #         # u.attack(self.enemy_start_locations[0])
+                #         target = self.enemy_start_locations[0]
+
+                #     await self.do(u.attack(target)) 
             
             except Exception as e:
                 print(e)
@@ -292,9 +381,9 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
 
         #5: voidray flee (back to base)
         elif action == 5:
-            if self.units(UnitTypeId.VOIDRAY).amount > 0:
+            if self.units(VOIDRAY).idle.amount > 0:
                 for vr in self.units(UnitTypeId.VOIDRAY):
-                    vr.attack(self.start_location)
+                    await self.do(vr.attack(self.start_location))
 
 
         map = np.zeros((self.game_info.map_size[0], self.game_info.map_size[1], 3), dtype=np.uint8)
@@ -318,7 +407,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
             map[math.ceil(pos.y)][math.ceil(pos.x)] = c
 
         # draw the enemy units:
-        for enemy_unit in self.state.enemy_units:
+        for enemy_unit in self.known_enemy_units:
             pos = enemy_unit.position
             c = [100, 0, 255]
             # get unit health fraction:
@@ -327,7 +416,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
 
 
         # draw the enemy structures:
-        for enemy_structure in self.state.enemy_units.structure:
+        for enemy_structure in self.known_enemy_structures:
             pos = enemy_structure.position
             c = [0, 100, 255]
             # get structure health fraction:
@@ -406,7 +495,7 @@ class IncrediBot(BotAI): # inhereits from BotAI (part of BurnySC2)
             for voidray in self.units(UnitTypeId.VOIDRAY):
                 # if voidray is attacking and is in range of enemy unit:
                 if voidray.is_attacking and voidray.target_in_range:
-                    if self.enemy_units.closer_than(8, voidray) or self.enemy_structures.closer_than(8, voidray):
+                    if self.known_enemy_units.closer_than(8, voidray) or self.known_enemy_structures.closer_than(8, voidray):
                         # reward += 0.005 # original was 0.005, decent results, but let's 3x it. 
                         reward += 0.015  
                         attack_count += 1
